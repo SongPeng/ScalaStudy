@@ -40,6 +40,8 @@ object MyToken {
 
 import MyToken._
 
+class ResetException extends Exception
+
 class Interpreter2(line: String) {
 
   def error(message: String): Exception = new ExpressionError(tokenbegin, message)
@@ -54,6 +56,24 @@ class Interpreter2(line: String) {
   var forward = -1
   var lexbegin = -1
   var tokenbegin = 0
+
+
+  def runAndReset[R](fun: => R): R = {
+    val f = forward
+    val l = lexbegin
+    val t = tokenbegin
+
+
+    val r = fun
+
+    forward = f
+    lexbegin = l
+    tokenbegin = t
+
+    r
+  }
+
+  var inBraces = 0
 
   def nextChar(): Char = {
     forward += 1
@@ -95,7 +115,7 @@ class Interpreter2(line: String) {
     (m, ch)
   }
 
-  def matchChar(condition: Char => Boolean, reset: Boolean = true, stepThrough: Boolean = false) = {
+  def matchChar2(condition: Char => Boolean, reset: Boolean = true, stepThrough: Boolean = false) = {
     val ch = nextChar
     val m = condition(ch)
     if (!m && reset)
@@ -138,7 +158,7 @@ class Interpreter2(line: String) {
     tokenbegin = lexbegin
   }
 
-  @deprecated
+  @deprecated("use `matchToken instead")
   def matchSeq(str: String): Boolean = {
 
     assert(!str.isEmpty, "matching str is empty")
@@ -165,15 +185,26 @@ class Interpreter2(line: String) {
     stack.exists(nextChar ==)
   }
 
-
   def isVarDef(): Boolean = {
-    matchToken("var", false) && matchChar(isWhitespace, (_ => true))
+    runAndReset[Boolean] {
+      matchToken("var", false) && matchChar(isWhitespace, (_ => true))
+    }
   }
 
   def varDef(): Term = {
 
     matchToken("var")
     ignoreWhiteSpace()
+
+    val f = forward
+    val l = lexbegin
+    val t = tokenbegin
+
+    def reset() = {
+      forward = f
+      lexbegin = l
+      tokenbegin = t
+    }
 
     val (m, firstChar) = matchChar(isLetter)
 
@@ -194,6 +225,15 @@ class Interpreter2(line: String) {
     if (!isEqSign._1)
       throw error(String.format("`= expexted but found : `%s`", isEqSign._2.toString))
 
+    val id = buffer.toString
+
+    findSymbol(id) match {
+      case Some(Keyword(w)) =>
+        reset()
+        throw error(String.format("%s is reserved,can not be a variable name", w))
+      case None =>
+    }
+
     Assignment(buffer.toString, expression())
   }
 
@@ -205,6 +245,7 @@ class Interpreter2(line: String) {
         case Some(v) => true
       }
     }
+
     val buffer = new StringBuilder
     repeatMatchChar(isLetterOrDigit) {
       (_, c) => buffer.append(c)
@@ -222,8 +263,14 @@ class Interpreter2(line: String) {
   def number(): Term = {
     val buffer = new StringBuilder
 
+    val unary = matchChar(isPlusOrMinus)
+
+    if (unary._1)
+      buffer.append(unary._2)
+
     repeatMatchChar(isDigit) {
-      (_, c) => buffer.append(c)
+      (_, c) =>
+        buffer.append(c)
     }
 
     if (matchChar('.' ==)) {
@@ -243,8 +290,12 @@ class Interpreter2(line: String) {
         (_, c) => buffer.append(c)
       }
     }
-
-    Num(JDouble.parseDouble(buffer.toString))
+    val value = try {
+      JDouble.parseDouble(buffer.toString)
+    } catch {
+      case e: NumberFormatException => throw error("can not parse the number.")
+    }
+    Num(value)
 
   }
 
@@ -253,13 +304,15 @@ class Interpreter2(line: String) {
     if (matchChar(isLetter, (_ => true)))
       variable()
     else if (matchChar('(' ==)) {
+      inBraces += 1
       val exp = expression()
       ignoreWhiteSpace()
       val (m, ch) = matchChar(')' ==)
       if (!m)
         throw error(String.format("`) expected but found : %s", ch.toString))
+      inBraces -= 1
       exp
-    } else if (matchChar(isDigit, (_ => true))) {
+    } else if (matchChar(isDigit, (_ => true)) || matchChar(isPlusOrMinus, (_ => true))) {
       number()
     } else {
       throw error("unkonw symbol.")
@@ -281,7 +334,11 @@ class Interpreter2(line: String) {
       //case (false, c) => throw new SyntaxError(String.format("`* or `/ expected buf found : %s", c.toString))
         case (true, '*') => result = Multiply(result, factor())
         case (true, '/') => result = Division(result, factor())
-        case _ => result
+        case (_, EOF) => result
+        case (false, ')') if (inBraces > 0) => result
+        case (false, '+') => result
+        case (false, '-') => result
+        case _ => throw error(String.format("`operater expexted but found : %s", sign._2.toString))
       }
 
     } while (sign._1)
@@ -289,10 +346,9 @@ class Interpreter2(line: String) {
     result
   }
 
+  private def isPlusOrMinus(c: Char): Boolean = '+' == c || '-' == c
+
   def expression(): Term = {
-
-    def isPlusOrMinus(c: Char): Boolean = '+' == c || '-' == c
-
     ignoreWhiteSpace()
 
     val left = multiplyOrDivide()
@@ -305,13 +361,16 @@ class Interpreter2(line: String) {
       sign match {
         case (true, '+') => result = Add(result, multiplyOrDivide())
         case (true, '-') => result = Minus(result, multiplyOrDivide())
-        case _ => result
+        case (false, ')') if (inBraces > 0) => result
+        case (_, EOF) => result
+        case _ => throw error(String.format("`operater expexted but found : %s", sign._2.toString))
       }
     } while (sign._1)
     result
   }
 
   def statement(): Term = {
+    ignoreWhiteSpace()
     if (matchChar(isLetter, (_ => true))) {
       if (isVarDef())
         varDef()
