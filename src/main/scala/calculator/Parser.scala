@@ -42,12 +42,20 @@ object Parser {
 
   val stdinReader = Source.stdin.bufferedReader
 
+  def process(line: String): Term Either Exception = try {
+    Left(new Interpreter2(line).process)
+  } catch {
+    case s: Exception => Right(s)
+  }
+
+  val prefix = "> "
+
   @tailrec
   def interpreterLoop(): Unit = {
     val buffer = new StringBuilder()
     var line = ""
     var scan = true
-    print("> ")
+    print(prefix)
     while (scan) {
       line = stdinReader.readLine()
       if (!line.trim.isEmpty) {
@@ -59,12 +67,15 @@ object Parser {
         }
       }
     }
-    val result = try {
-      new Interpreter(buffer.toString).process
-    } catch {
-      case s: Exception => s.getMessage
+    process(buffer.toString) match {
+      case Left(t) => printf("get : %s \n= %s \n", t, evaluate(t))
+      case Right(e: ExpressionError) =>
+        val padding = for (i <- 2 to (prefix.length + e.position)) yield ' '
+        println(e.getMessage)
+        println(line)
+        print(padding.mkString)
+        println('^')
     }
-    println(result)
     buffer.clear()
     interpreterLoop();
   }

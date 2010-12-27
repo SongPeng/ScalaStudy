@@ -11,6 +11,7 @@ import calculator.Evaluator.{Term, VarNameInValid, SyntaxError, Keyword}
 import org.slf4j.LoggerFactory
 import Evaluator._
 import java.lang.{Double => JDouble}
+import MyToken._
 
 class Interpreter(line: String) {
 

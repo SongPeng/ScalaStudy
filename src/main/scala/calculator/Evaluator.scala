@@ -30,27 +30,15 @@ object Evaluator {
 
   val log = LoggerFactory.getLogger(getClass)
 
-  val EQ = '='
-  val PLUS = '+'
-  val MINUS = '-'
-  val MULTIPLY = '*'
-  val DIVISION = '/'
-  val LET = "let"
-  val LB = '('
-  val RB = ')'
-  val UNDERSCORE = '_'
-  val VAR = "var"
-  val POINT = '.'
-  val E = 'E'
-
   val termTable: Map[String, Term] = Map(
-    LET -> Keyword(LET),
-    VAR -> Keyword(VAR)
+    "var" -> Keyword("var")
   )
 
   def findSymbol(id: String) = termTable get id
 
   def findVar(id: String) = context get id
+
+  def installVar(id:String,value :Term) = context.put(id,value)
 
   implicit def numberToTerm(t: Double): Num = Num(t)
 
