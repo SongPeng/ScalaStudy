@@ -1,188 +1,388 @@
 package calculator
 
-import calculator.Evaluator.{Term, VarNameInValid, SyntaxError, Keyword}
-
 /**
  * User: sun-april
- * Date: 10-12-26
- * Time: 下午10:10
+ * Date: 10-12-27
+ * Time: 上午12:35
  */
 
-import org.slf4j.LoggerFactory
-import Evaluator._
+import Character._
+import calculator.Evaluator._
+
 import java.lang.{Double => JDouble}
+
+case class Debug(remain: String) extends Term
+
+
+class ExpressionError(val position: Int, message: String) extends Exception(message)
+
+object MyToken {
+  val EOF = '\u0003'
+  val EQ = '='
+  val PLUS = '+'
+  val MINUS = '-'
+  val MULTIPLY = '*'
+  val DIVISION = '/'
+
+  val LB = '('
+  val RB = ')'
+  val UNDERSCORE = '_'
+
+  val POINT = '.'
+  val E = 'E'
+
+
+  val LET = "let"
+  val VAR = "var"
+
+
+}
+
 import MyToken._
 
 class Interpreter(line: String) {
 
-  val log = LoggerFactory.getLogger(getClass)
+  def error(message: String): Exception = new ExpressionError(tokenbegin, message)
 
-  var pointer = -1;
-  var fp = 0;
-  val buffer = new StringBuilder
+  type MatchedChar = (Boolean, Char)
 
-  private def nextChar() = {
-    pointer += 1
-    fp = pointer
-    val ch = line.charAt(pointer)
-    buffer.append(ch)
-    ch
+  implicit def match2Bool(m: MatchedChar): Boolean = m._1
+
+  def debug = Debug(line.drop(lexbegin))
+
+
+  var forward = -1
+  var lexbegin = -1
+  var tokenbegin = 0
+
+
+  def runAndReset[R](fun: => R): R = {
+    val f = forward
+    val l = lexbegin
+    val t = tokenbegin
+
+
+    val r = fun
+
+    forward = f
+    lexbegin = l
+    tokenbegin = t
+
+    r
   }
 
-  private def forward(): Char = {
-    fp += 1
-    val ch = line.charAt(fp)
-    ch
+  var inBraces = 0
+
+  def nextChar(): Char = {
+    forward += 1
+    if (forward >= line.length)
+      EOF
+    else
+      line.charAt(forward)
   }
 
-  private def clearBuffer(ignoreSpace: Boolean = true) {
-    pointer = fp - 1
-    fp = pointer
-
-    if (ignoreSpace)
-      ignoreWhiteSpace()
-
-    buffer.clear
+  def backward() = {
+    forward -= 1
+    lexbegin = forward
   }
 
-  private def ignoreWhiteSpace() {
-    while (Character.isWhitespace(nextChar)) {}
-    pointer -= 1
-    fp = pointer
+  def stepOver() = {
+    lexbegin = forward
   }
 
-  private def nextToken(condition: Char => Boolean): String = {
-    var ch = forward()
+  def resetForward() = forward = lexbegin
+
+  def nextToken(condition: Char => Boolean): String = {
+    val buffer = new StringBuilder
+    var ch = nextChar()
     while (condition(ch)) {
       buffer.append(ch)
-      ch = forward()
+      ch = nextChar()
     }
-
-    log.debug("token : {}", buffer.toString)
     buffer.toString
   }
 
-  private def isDefinition(): Boolean = {
-    val symbol = nextToken(Character.isLetterOrDigit)
+  def matchChar(condition: Char => Boolean, reset: Boolean => Boolean = (m) => !m): (Boolean, Char) = {
+    val ch = nextChar
+    val m = condition(ch)
+    if (reset(m))
+      backward()
+    else
+      stepOver()
 
-    findSymbol(symbol) match {
-      case Some(Keyword(LET)) =>
-        clearBuffer()
-        true
-      case None => false
+    (m, ch)
+  }
+
+  def matchChar2(condition: Char => Boolean, reset: Boolean = true, stepThrough: Boolean = false) = {
+    val ch = nextChar
+    val m = condition(ch)
+    if (!m && reset)
+      backward
+    else if (stepThrough)
+      stepOver
+    else
+      resetForward()
+
+    (m, ch)
+
+  }
+
+  def repeatMatchChar(condition: Char => Boolean)(fun: (Boolean, Char) => Any) = {
+
+    var m = matchChar(condition)
+    while (m._1) {
+      fun(m._1, m._2)
+      m = matchChar(condition)
     }
   }
 
-  private def isLetterOrDigitOrUnderscore(ch: Char) = Character.isLetterOrDigit(ch) || ch == UNDERSCORE
+  def matchToken(str: String, forward: Boolean = true): Boolean = {
+    for (c <- str) {
+      val next = nextChar
+      if (next != c) {
+        resetForward()
+        return false
+      }
+    }
 
-  private def isLetterOrUnderscore(ch: Char) = Character.isLetter(ch) || ch == UNDERSCORE
+    if (forward)
+      stepOver()
 
-  private def isDigit(ch: Char) = Character.isDigit(ch)
+    true
+  }
 
-  private def isEIgnoreCase(ch: Char) = ch == E
+  def ignoreWhiteSpace() {
+    while (matchChar(isWhitespace)) {}
+    tokenbegin = lexbegin
+  }
 
-  private def installVar() = {
+  @deprecated("use `matchToken instead")
+  def matchSeq(str: String): Boolean = {
 
-    val id = nextToken(isLetterOrDigitOrUnderscore)
+    assert(!str.isEmpty, "matching str is empty")
 
-    if (id.isEmpty)
-      throw new SyntaxError("variable name expcted!")
+    var stack = str
+    var head = ' '
+    var ch = ' '
+    do {
+      head = stack.charAt(0)
+      ch = nextChar()
+      stack = stack.substring(1)
+    } while (head == ch && !stack.isEmpty)
+
+    val m = stack.isEmpty
+    if (!m)
+      resetForward()
+    else
+      stepOver()
+
+    m
+  }
+
+  def matchOneOf(stack: Set[Char]): Boolean = {
+    stack.exists(nextChar ==)
+  }
+
+  def isVarDef(): Boolean = {
+    runAndReset[Boolean] {
+      matchToken("var", false) && matchChar(isWhitespace, (_ => true))
+    }
+  }
+
+  def varDef(): Term = {
+
+    matchToken("var")
+    ignoreWhiteSpace()
+
+    val f = forward
+    val l = lexbegin
+    val t = tokenbegin
+
+    def reset() = {
+      forward = f
+      lexbegin = l
+      tokenbegin = t
+    }
+
+    val (m, firstChar) = matchChar(isLetter)
+
+    if (!m) {
+      throw error("variable name must start with letter")
+    }
+
+    val buffer = new StringBuilder
+    buffer.append(firstChar)
+
+    repeatMatchChar(isLetterOrDigit) {
+      (_, c) => buffer.append(c)
+    }
+
+    ignoreWhiteSpace()
+
+    val isEqSign = matchChar('=' ==)
+    if (!isEqSign._1)
+      throw error(String.format("`= expexted but found : `%s`", isEqSign._2.toString))
+
+    val id = buffer.toString
 
     findSymbol(id) match {
-      case Some(Keyword(word)) =>
-        throw new VarNameInValid(id, "key word is preserved")
+      case Some(Keyword(w)) =>
+        reset()
+        throw error(String.format("%s is reserved,can not be a variable name", w))
       case None =>
-        val first: Char = id.charAt(0)
-        if (!isLetterOrUnderscore(first))
-          throw new VarNameInValid(id, "vars must start with letter or _")
     }
 
-    clearBuffer()
+    Assignment(buffer.toString, expression())
+  }
 
-    val assign = forward
+  def variable(): Term = {
 
-    assign match {
-      case EQ =>
-        clearBuffer()
-        Assignment(id, expression())
-      case _ => throw new SyntaxError(String.format("`%s expexted, but `%s found", EQ.toString, assign.toString))
+    def varDefined(id: String): Boolean = {
+      findVar(id) match {
+        case None => false
+        case Some(v) => true
+      }
+    }
+
+    val buffer = new StringBuilder
+    repeatMatchChar(isLetterOrDigit) {
+      (_, c) => buffer.append(c)
+    }
+
+    val id = buffer.toString()
+
+    if (!varDefined(id)) {
+      throw error(String.format("var name `%s` not defined", id))
+    }
+
+    Var(buffer.toString)
+  }
+
+  def number(): Term = {
+    val buffer = new StringBuilder
+
+    val unary = matchChar(isPlusOrMinus)
+
+    if (unary._1)
+      buffer.append(unary._2)
+
+    repeatMatchChar(isDigit) {
+      (_, c) =>
+        buffer.append(c)
+    }
+
+    if (matchChar('.' ==)) {
+      buffer.append('.')
+      repeatMatchChar(isDigit) {
+        (_, c) => buffer.append(c)
+      }
+    }
+
+    if (matchChar(c => c == 'E' || c == 'e')) {
+      buffer.append('E')
+      val sign = matchChar(c => '+' == c || '-' == c)
+      if (sign)
+        buffer.append(sign._2)
+
+      repeatMatchChar(isDigit) {
+        (_, c) => buffer.append(c)
+      }
+    }
+    val value = try {
+      JDouble.parseDouble(buffer.toString)
+    } catch {
+      case e: NumberFormatException => throw error("can not parse the number.")
+    }
+    Num(value)
+
+  }
+
+  def factor(): Term = {
+    ignoreWhiteSpace()
+    if (matchChar(isLetter, (_ => true)))
+      variable()
+    else if (matchChar('(' ==)) {
+      inBraces += 1
+      val exp = expression()
+      ignoreWhiteSpace()
+      val (m, ch) = matchChar(')' ==)
+      if (!m)
+        throw error(String.format("`) expected but found : %s", ch.toString))
+      inBraces -= 1
+      exp
+    } else if (matchChar(isDigit, (_ => true)) || matchChar(isPlusOrMinus, (_ => true))) {
+      number()
+    } else {
+      throw error("unkonw symbol.")
     }
   }
 
-  private def factor(): Term = {
-    val c = nextChar()
-    c match {
-    // braces
-      case LB =>
-        clearBuffer()
-        val exp = expression()
-        val n = forward
-        n match {
-          case RB =>
-            clearBuffer()
-            exp
-          case _ => throw new SyntaxError(String.format("`%s expected, but `%s found", RB.toString, n.toString))
-        }
-      // variable
-      case ch if isLetterOrUnderscore(ch) =>
-        Var(nextToken(isLetterOrDigitOrUnderscore))
-      case ch if isDigit(ch) =>
-        val number = new StringBuilder
-        number append nextToken(isDigit)
-        clearBuffer(false) // inner digit,space not allow
-        optPoint(number)
-        optE(number)
-        Num(JDouble.parseDouble(number.toString))
-      case _ => debug_!
-    }
+  def multiplyOrDivide(): Term = {
+    def isMulOrDiv(c: Char): Boolean = '*' == c || '/' == c
 
-  }
-
-  def optPoint(buffer: StringBuilder) {
-    forward match {
-      case POINT =>
-        buffer.append(POINT)
-        clearBuffer(false) // inner digit,space not allow
-        buffer append nextToken(isDigit)
-        clearBuffer(false)
-      case _ =>
-    }
-  }
-
-  def optE(buffer: StringBuilder) {
-    forward match {
-      case E =>
-        buffer append nextToken(s => '+' == s || '+' == s)
-        clearBuffer(false)
-        buffer append nextToken(isDigit)
-        clearBuffer()
-      case _ =>
-    }
-  }
-
-
-  private def term(): Term = {
+    ignoreWhiteSpace()
     val left = factor()
-    left
+
+    var result = left
+    var sign = (false, EOF)
+    do {
+      ignoreWhiteSpace()
+      sign = matchChar(isMulOrDiv)
+      sign match {
+      //case (false, c) => throw new SyntaxError(String.format("`* or `/ expected buf found : %s", c.toString))
+        case (true, '*') => result = Multiply(result, factor())
+        case (true, '/') => result = Division(result, factor())
+        case (_, EOF) => result
+        case (false, ')') if (inBraces > 0) => result
+        case (false, '+') => result
+        case (false, '-') => result
+        case _ => throw error(String.format("`operater expexted but found : %s", sign._2.toString))
+      }
+
+    } while (sign._1)
+
+    result
   }
 
-  private def expression(): Term = {
-    val left = term()
-    left
+  private def isPlusOrMinus(c: Char): Boolean = '+' == c || '-' == c
+
+  def expression(): Term = {
+    ignoreWhiteSpace()
+
+    val left = multiplyOrDivide()
+
+    var result = left
+    var sign = (false, EOF)
+    do {
+      ignoreWhiteSpace()
+      sign = matchChar(isPlusOrMinus)
+      sign match {
+        case (true, '+') => result = Add(result, multiplyOrDivide())
+        case (true, '-') => result = Minus(result, multiplyOrDivide())
+        case (false, ')') if (inBraces > 0) => result
+        case (_, EOF) => result
+        case _ => throw error(String.format("`operater expexted but found : %s", sign._2.toString))
+      }
+    } while (sign._1)
+    result
   }
 
-  private def debug_! = Debug(line.substring(pointer))
+  def statement(): Term = {
+    ignoreWhiteSpace()
+    if (matchChar(isLetter, (_ => true))) {
+      if (isVarDef())
+        varDef()
+      else
+        expression()
+    }
+    else
+      expression()
+
+  }
+
 
   def process(): Term = {
-    clearBuffer()
-    val ch = nextChar
-    if (!Character.isLetter(ch)) {
-      expression()
-    }
-    if (isDefinition()) {
-      installVar()
-    } else {
-      expression()
-    }
+    statement()
   }
+
 }

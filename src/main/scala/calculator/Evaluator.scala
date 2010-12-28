@@ -38,7 +38,7 @@ object Evaluator {
 
   def findVar(id: String) = context get id
 
-  def installVar(id:String,value :Term) = context.put(id,value)
+  def installVar(id: String, value: Term) = context.put(id, value)
 
   implicit def numberToTerm(t: Double): Num = Num(t)
 

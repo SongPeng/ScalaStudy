@@ -28,7 +28,6 @@ package calculator
 
 import io.Source
 import org.slf4j.LoggerFactory
-import collection.mutable.Map
 import Evaluator._
 import annotation.tailrec
 
@@ -43,7 +42,7 @@ object Parser {
   val stdinReader = Source.stdin.bufferedReader
 
   def process(line: String): Term Either Exception = try {
-    Left(new Interpreter2(line).process)
+    Left(new Interpreter(line).process)
   } catch {
     case s: Exception => Right(s)
   }
