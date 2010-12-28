@@ -18,24 +18,6 @@ class ExpressionError(val position: Int, message: String) extends Exception(mess
 
 object MyToken {
   val EOF = '\u0003'
-  val EQ = '='
-  val PLUS = '+'
-  val MINUS = '-'
-  val MULTIPLY = '*'
-  val DIVISION = '/'
-
-  val LB = '('
-  val RB = ')'
-  val UNDERSCORE = '_'
-
-  val POINT = '.'
-  val E = 'E'
-
-
-  val LET = "let"
-  val VAR = "var"
-
-
 }
 
 import MyToken._
@@ -49,7 +31,6 @@ class Interpreter(line: String) {
   implicit def match2Bool(m: MatchedChar): Boolean = m._1
 
   def debug = Debug(line.drop(lexbegin))
-
 
   var forward = -1
   var lexbegin = -1
@@ -86,9 +67,7 @@ class Interpreter(line: String) {
     lexbegin = forward
   }
 
-  def stepOver() = {
-    lexbegin = forward
-  }
+  def stepOver() = lexbegin = forward
 
   def resetForward() = forward = lexbegin
 
@@ -111,20 +90,6 @@ class Interpreter(line: String) {
       stepOver()
 
     (m, ch)
-  }
-
-  def matchChar2(condition: Char => Boolean, reset: Boolean = true, stepThrough: Boolean = false) = {
-    val ch = nextChar
-    val m = condition(ch)
-    if (!m && reset)
-      backward
-    else if (stepThrough)
-      stepOver
-    else
-      resetForward()
-
-    (m, ch)
-
   }
 
   def repeatMatchChar(condition: Char => Boolean)(fun: (Boolean, Char) => Any) = {
@@ -154,33 +119,6 @@ class Interpreter(line: String) {
   def ignoreWhiteSpace() {
     while (matchChar(isWhitespace)) {}
     tokenbegin = lexbegin
-  }
-
-  @deprecated("use `matchToken instead")
-  def matchSeq(str: String): Boolean = {
-
-    assert(!str.isEmpty, "matching str is empty")
-
-    var stack = str
-    var head = ' '
-    var ch = ' '
-    do {
-      head = stack.charAt(0)
-      ch = nextChar()
-      stack = stack.substring(1)
-    } while (head == ch && !stack.isEmpty)
-
-    val m = stack.isEmpty
-    if (!m)
-      resetForward()
-    else
-      stepOver()
-
-    m
-  }
-
-  def matchOneOf(stack: Set[Char]): Boolean = {
-    stack.exists(nextChar ==)
   }
 
   def isVarDef(): Boolean = {
@@ -232,7 +170,7 @@ class Interpreter(line: String) {
       case None =>
     }
 
-    Assignment(buffer.toString, expression())
+    Assignment(id, expression())
   }
 
   def variable(): Term = {
@@ -255,7 +193,7 @@ class Interpreter(line: String) {
       throw error(String.format("var name `%s` not defined", id))
     }
 
-    Var(buffer.toString)
+    Var(id)
   }
 
   def number(): Term = {
@@ -329,7 +267,6 @@ class Interpreter(line: String) {
       ignoreWhiteSpace()
       sign = matchChar(isMulOrDiv)
       sign match {
-      //case (false, c) => throw new SyntaxError(String.format("`* or `/ expected buf found : %s", c.toString))
         case (true, '*') => result = Multiply(result, factor())
         case (true, '/') => result = Division(result, factor())
         case (_, EOF) => result

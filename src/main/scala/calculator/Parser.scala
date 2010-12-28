@@ -1,7 +1,6 @@
 package calculator
 
 /**
- * Created by IntelliJ IDEA.
  * User: sun-april
  * Date: 10-12-26
  * Time: 下午3:39
@@ -10,11 +9,19 @@ package calculator
  *
  * letters := letter+
  *
- * variable := [_letter] (digits | letters)?
+ * digit := [0-9]
  *
- * define := 'let' variable '=' expression
+ * digits := digit+
  *
- * factor := numbers
+ * variable := letter (digits | letters)?
+ *
+ * define := 'var' variable '=' expression
+ *
+ * lazy-define : = 'lazy' define
+ *
+ * number := digits ('.' digits)? ([Ee] [+-]? digits)?
+ *
+ * factor := number
  *        := variable
  *        := '(' expression ')'
  *
@@ -24,6 +31,7 @@ package calculator
  * expression := term + term
  *            := term - term
  *
+ * 暂未实现 lazy-define
  */
 
 import io.Source
