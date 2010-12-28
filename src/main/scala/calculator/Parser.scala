@@ -1,5 +1,10 @@
 package calculator
 
+import io.Source
+import org.slf4j.LoggerFactory
+import Evaluator._
+import annotation.tailrec
+
 /**
  * User: sun-april
  * Date: 10-12-26
@@ -33,11 +38,6 @@ package calculator
  *
  * 暂未实现 lazy-define
  */
-
-import io.Source
-import org.slf4j.LoggerFactory
-import Evaluator._
-import annotation.tailrec
 
 object Parser {
 
