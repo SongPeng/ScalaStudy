@@ -44,6 +44,8 @@ object Evaluator {
 
   class SymbolNotDefinedException(symbol: String) extends Exception(String.format("symbol `%s not defined", symbol))
 
+  class DividedByZero(position: Int) extends Exception("divisor can't be zero")
+
   class VarNameInValid(name: String, message: String) extends Exception(String.format("variable name `%s is invalid cause : %s", name, message))
 
   class SyntaxError(msg: String) extends Exception(msg)

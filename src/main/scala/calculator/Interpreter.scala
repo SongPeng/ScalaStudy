@@ -71,16 +71,6 @@ class Interpreter(line: String) {
 
   def resetForward() = forward = lexbegin
 
-  def nextToken(condition: Char => Boolean): String = {
-    val buffer = new StringBuilder
-    var ch = nextChar()
-    while (condition(ch)) {
-      buffer.append(ch)
-      ch = nextChar()
-    }
-    buffer.toString
-  }
-
   def matchChar(condition: Char => Boolean, reset: Boolean => Boolean = (m) => !m): (Boolean, Char) = {
     val ch = nextChar
     val m = condition(ch)
@@ -190,7 +180,7 @@ class Interpreter(line: String) {
     val id = buffer.toString()
 
     if (!varDefined(id)) {
-      throw error(String.format("var name `%s` not defined", id))
+      throw error(String.format("var name `%s` has not been defined", id))
     }
 
     Var(id)
@@ -229,7 +219,7 @@ class Interpreter(line: String) {
     val value = try {
       JDouble.parseDouble(buffer.toString)
     } catch {
-      case e: NumberFormatException => throw error("can not parse the number.")
+      case e: NumberFormatException => throw error("can't parse the number.")
     }
     Num(value)
 
@@ -240,12 +230,17 @@ class Interpreter(line: String) {
     if (matchChar(isLetter, (_ => true)))
       variable()
     else if (matchChar('(' ==)) {
+
       inBraces += 1
+
       val exp = expression()
+
       ignoreWhiteSpace()
+
       val (m, ch) = matchChar(')' ==)
       if (!m)
         throw error(String.format("`) expected but found : %s", ch.toString))
+
       inBraces -= 1
       exp
     } else if (matchChar(isDigit, (_ => true)) || matchChar(isPlusOrMinus, (_ => true))) {
@@ -273,7 +268,7 @@ class Interpreter(line: String) {
         case (false, ')') if (inBraces > 0) => result
         case (false, '+') => result
         case (false, '-') => result
-        case _ => throw error(String.format("`operater expexted but found : %s", sign._2.toString))
+        case _ => throw error(String.format("`operater expected but found : %s", sign._2.toString))
       }
 
     } while (sign._1)
@@ -298,7 +293,7 @@ class Interpreter(line: String) {
         case (true, '-') => result = Minus(result, multiplyOrDivide())
         case (false, ')') if (inBraces > 0) => result
         case (_, EOF) => result
-        case _ => throw error(String.format("`operater expexted but found : %s", sign._2.toString))
+        case _ => throw error(String.format("`operater expected but found : %s", sign._2.toString))
       }
     } while (sign._1)
     result

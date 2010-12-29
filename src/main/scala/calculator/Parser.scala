@@ -20,9 +20,12 @@ import annotation.tailrec
  *
  * variable := letter (digits | letters)?
  *
- * define := 'var' variable '=' expression
+ * definition := nonLazyVarDefine
+ *            := lazyVarDefinition
  *
- * lazy-define : = 'lazy' define
+ * nonLazyVarDefine := 'var' variable '=' expression
+ *
+ * lazyVarDefinition : = 'lazy' define
  *
  * number := digits ('.' digits)? ([Ee] [+-]? digits)?
  *
@@ -36,7 +39,10 @@ import annotation.tailrec
  * expression := term + term
  *            := term - term
  *
- * 暂未实现 lazy-define
+ * statement := definition
+ *           := expression
+ *
+ * 暂未实现 lazyVarDefinition
  */
 
 object Parser {
