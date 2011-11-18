@@ -1,7 +1,6 @@
 package calculator
 
 import io.Source
-import org.slf4j.LoggerFactory
 import Evaluator._
 import annotation.tailrec
 
@@ -46,8 +45,6 @@ import annotation.tailrec
  */
 
 object Parser {
-
-  val log = LoggerFactory.getLogger(getClass)
 
   val NON_EOF = '\\'
 

@@ -23,12 +23,9 @@ package calculator
  *
  */
 
-import org.slf4j.{Logger, LoggerFactory}
 import collection.mutable.Map
 
 object Evaluator {
-
-  val log = LoggerFactory.getLogger(getClass)
 
   val termTable: Map[String, Term] = Map(
     "var" -> Keyword("var")
@@ -94,7 +91,6 @@ object Evaluator {
     context += ("var1" -> 3)
     val term = Add(var1, Minus(Multiply(2, 8), Multiply(2, 5)))
     val result = evaluate(term)
-    log.info("term {} result is {}", term, result)
   }
 
 }
