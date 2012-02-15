@@ -3,7 +3,7 @@ package calculator
 /**
  * User: sun-april
  * Date: 10-12-26
- * Time: 下午2:22
+ * Time: 2:22
  *
  * digit := 0-9
  * digits := digit+

@@ -24,7 +24,7 @@ import annotation.tailrec
  *
  * nonLazyVarDefine := 'var' variable '=' expression
  *
- * lazyVarDefinition : = 'lazy' define
+ * lazyVarDefinition : = 'lazy' nonLazyVarDefine
  *
  * number := digits ('.' digits)? ([Ee] [+-]? digits)?
  *
