@@ -22,7 +22,7 @@ object MyToken {
 
 import MyToken._
 
-class Interpreter(line: String) {
+class CalcParser(line: String) {
 
   def error(message: String): Exception = new ExpressionError(tokenbegin, message)
 

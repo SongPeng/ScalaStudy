@@ -44,7 +44,7 @@ import annotation.tailrec
  * 暂未实现 lazyVarDefinition
  */
 
-object Parser {
+object Interpretor {
 
   val NON_EOF = '\\'
 
@@ -53,7 +53,7 @@ object Parser {
   val stdinReader = Source.stdin.bufferedReader
 
   def process(line: String): Term Either Exception = try {
-    Left(new Interpreter(line).process)
+    Left(new CalcParser(line).process)
   } catch {
     case s: Exception => Right(s)
   }
