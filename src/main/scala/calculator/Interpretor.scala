@@ -53,7 +53,7 @@ object Interpretor {
   val stdinReader = Source.stdin.bufferedReader
 
   def process(line: String): Term Either Exception = try {
-    Left(new CalcParser(line).process)
+    Left(new Parser(line).process)
   } catch {
     case s: Exception => Right(s)
   }
