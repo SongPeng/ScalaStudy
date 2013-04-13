@@ -7,8 +7,6 @@ import annotation.tailrec
 /**
  * User: sun-april
  * Date: 10-12-26
- * Time: 下午3:39
- *
  * letter := [a-zA-Z]
  *
  * letters := letter+
@@ -41,7 +39,7 @@ import annotation.tailrec
  * statement := definition
  *           := expression
  *
- * 暂未实现 lazyVarDefinition
+ * lazyVarDefinition
  */
 
 object Interpretor {

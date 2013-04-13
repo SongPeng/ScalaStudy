@@ -3,7 +3,6 @@ package calculator
 /**
  * User: sun-april
  * Date: 10-12-27
- * Time: 上午12:35
  */
 
 import Character._

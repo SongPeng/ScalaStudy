@@ -7,8 +7,6 @@ import annotation.target.beanGetter
  * Created by IntelliJ IDEA.
  * User: sun-april
  * Date: 10-12-20
- * Time: 上午3:11
- * To change this template use File | Settings | File Templates.
  */
 
 

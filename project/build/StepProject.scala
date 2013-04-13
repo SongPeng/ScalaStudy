@@ -6,8 +6,6 @@ class HelloWorldProject(info: ProjectInfo) extends DefaultProject(info) {
 
   override def mainClass = Some("calculator.Parser")
 
-  override def libraryDependencies = Set(
-    "ch.qos.logback" % "logback-classic" % "0.9.27"
-  ) ++ super.libraryDependencies
+  override def libraryDependencies = Set() ++ super.libraryDependencies
 
 }

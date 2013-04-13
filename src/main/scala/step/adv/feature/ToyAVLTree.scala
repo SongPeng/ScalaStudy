@@ -11,8 +11,6 @@ object AVLTree {
 
   /**
    * 2011-04-03
-   * 未完成。
-   * 关键的旋转算法还没实现。
    * toy-writing for fun and studying scala
    * base on scala collections framework
    * @see scala.collection.immutable.RedBlack
