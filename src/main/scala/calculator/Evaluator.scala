@@ -23,7 +23,8 @@ package calculator
  *
  */
 
-import collection.mutable.Map
+
+import scala.collection.mutable.Map
 
 object Evaluator {
 
@@ -35,41 +36,45 @@ object Evaluator {
 
   def findVar(id: String) = context get id
 
-  def installVar(id: String, value: Term) = context.put(id, value)
+  def installVar(id: String, value: Expression) = context.put(id, value)
 
-  implicit def numberToTerm(t: Double): Num = Num(t)
+  implicit def numberToExpr(t: Double): Num = Num(t)
 
-  class SymbolNotDefinedException(symbol: String) extends Exception(String.format("symbol `%s not defined", symbol))
+  class SymbolNotDefinedException(symbol: String)
+    extends Exception(String.format("symbol `%s not defined", symbol))
 
   class DividedByZero(position: Int) extends Exception("divisor can't be zero")
 
-  class VarNameInValid(name: String, message: String) extends Exception(String.format("variable name `%s is invalid cause : %s", name, message))
+  class VarNameInValid(name: String, message: String)
+    extends Exception(String.format("variable name `%s is invalid cause : %s", name, message))
 
   class SyntaxError(msg: String) extends Exception(msg)
 
-  abstract class Term
+  sealed abstract class Term
 
-  case class Add(left: Term, right: Term) extends Term
+  abstract class Expression extends Term
 
-  case class Minus(left: Term, right: Term) extends Term
+  case class Add(left: Expression, right: Expression) extends Expression
 
-  case class Multiply(left: Term, right: Term) extends Term
+  case class Minus(left: Expression, right: Expression) extends Expression
 
-  case class Division(left: Term, right: Term) extends Term
+  case class Multiply(left: Expression, right: Expression) extends Expression
 
-  case class Num(value: Double) extends Term
+  case class Division(left: Expression, right: Expression) extends Expression
 
-  case class Var(id: String) extends Term
+  case class Num(value: Double) extends Expression
+
+  case class Var(id: String) extends Expression
+
+  case class Assignment(id: String, value: Expression) extends Expression
 
   case class Keyword(word: String) extends Term
 
-  case class Assignment(id: String, value: Term) extends Term
-
   case class Debug(remain: String) extends Term
 
-  val context: Map[String, Term] = Map()
+  val context: Map[String, Expression] = Map()
 
-  def evaluate(exp: Term): Double = exp match {
+  def evaluate(exp: Expression): Double = exp match {
     case Add(l, r) => evaluate(l) + evaluate(r)
     case Minus(l, r) => evaluate(l) - evaluate(r)
     case Multiply(l, r) => evaluate(l) * evaluate(r)
@@ -79,8 +84,8 @@ object Evaluator {
       case Some(t) => evaluate(t)
       case None => throw new SymbolNotDefinedException(id)
     }
-    case Assignment(id, exp) =>
-      val result = evaluate(exp)
+    case Assignment(id, v) =>
+      val result = evaluate(v)
       context.put(id, result)
       result
   }

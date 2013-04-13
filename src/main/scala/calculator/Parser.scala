@@ -7,19 +7,13 @@ package calculator
 
 import Character._
 import calculator.Evaluator._
+import language.implicitConversions
 
 import java.lang.{Double => JDouble}
 
-case class Debug(remain: String) extends Term
-
-
 class ExpressionError(val position: Int, message: String) extends Exception(message)
 
-object MyToken {
-  val EOF = '\u0003'
-}
-
-import MyToken._
+import Interpreter.EOF
 
 class Parser(line: String) {
 
@@ -53,7 +47,7 @@ class Parser(line: String) {
 
   var inBraces = 0
 
-  def nextChar(): Char = {
+  def nextChar : Char = {
     forward += 1
     if (forward >= line.length)
       EOF
@@ -61,14 +55,14 @@ class Parser(line: String) {
       line.charAt(forward)
   }
 
-  def backward() = {
+  def backward(){
     forward -= 1
     lexbegin = forward
   }
 
-  def stepOver() = lexbegin = forward
+  def stepOver(){ lexbegin = forward }
 
-  def resetForward() = forward = lexbegin
+  def resetForward() { forward = lexbegin }
 
   def matchChar(condition: Char => Boolean, reset: Boolean => Boolean = (m) => !m): (Boolean, Char) = {
     val ch = nextChar
@@ -81,7 +75,7 @@ class Parser(line: String) {
     (m, ch)
   }
 
-  def repeatMatchChar(condition: Char => Boolean)(fun: (Boolean, Char) => Any) = {
+  def repeatMatchChar(condition: Char => Boolean)(fun: (Boolean, Char) => Any){
 
     var m = matchChar(condition)
     while (m._1) {
@@ -110,13 +104,13 @@ class Parser(line: String) {
     tokenbegin = lexbegin
   }
 
-  def isVarDef(): Boolean = {
+  def isVarDef : Boolean = {
     runAndReset[Boolean] {
-      matchToken("var", false) && matchChar(isWhitespace, (_ => true))
+      matchToken("var", forward = false) && matchChar(isWhitespace, (_ => true))
     }
   }
 
-  def varDef(): Term = {
+  def varDef(): Expression = {
 
     matchToken("var")
     ignoreWhiteSpace()
@@ -125,7 +119,7 @@ class Parser(line: String) {
     val l = lexbegin
     val t = tokenbegin
 
-    def reset() = {
+    def reset(){
       forward = f
       lexbegin = l
       tokenbegin = t
@@ -146,23 +140,23 @@ class Parser(line: String) {
 
     ignoreWhiteSpace()
 
-    val isEqSign = matchChar('=' ==)
+    val isEqSign = matchChar('=' == _)
     if (!isEqSign._1)
       throw error(String.format("`= expexted but found : `%s`", isEqSign._2.toString))
 
-    val id = buffer.toString
+    val id = buffer.toString()
 
     findSymbol(id) match {
       case Some(Keyword(w)) =>
         reset()
         throw error(String.format("%s is reserved,can not be a variable name", w))
-      case None =>
+      case _ =>
     }
 
     Assignment(id, expression())
   }
 
-  def variable(): Term = {
+  def variable(): Expression = {
 
     def varDefined(id: String): Boolean = {
       findVar(id) match {
@@ -185,7 +179,7 @@ class Parser(line: String) {
     Var(id)
   }
 
-  def number(): Term = {
+  def number(): Expression = {
     val buffer = new StringBuilder
 
     val unary = matchChar(isPlusOrMinus)
@@ -198,7 +192,7 @@ class Parser(line: String) {
         buffer.append(c)
     }
 
-    if (matchChar('.' ==)) {
+    if (matchChar('.' == _)) {
       buffer.append('.')
       repeatMatchChar(isDigit) {
         (_, c) => buffer.append(c)
@@ -216,7 +210,7 @@ class Parser(line: String) {
       }
     }
     val value = try {
-      JDouble.parseDouble(buffer.toString)
+      JDouble.parseDouble(buffer.toString())
     } catch {
       case e: NumberFormatException => throw error("can't parse the number.")
     }
@@ -224,11 +218,11 @@ class Parser(line: String) {
 
   }
 
-  def factor(): Term = {
+  def factor(): Expression = {
     ignoreWhiteSpace()
     if (matchChar(isLetter, (_ => true)))
       variable()
-    else if (matchChar('(' ==)) {
+    else if (matchChar('(' == _ )) {
 
       inBraces += 1
 
@@ -236,7 +230,7 @@ class Parser(line: String) {
 
       ignoreWhiteSpace()
 
-      val (m, ch) = matchChar(')' ==)
+      val (m, ch) = matchChar(')' == _)
       if (!m)
         throw error(String.format("`) expected but found : %s", ch.toString))
 
@@ -249,7 +243,7 @@ class Parser(line: String) {
     }
   }
 
-  def multiplyOrDivide(): Term = {
+  def multiplyOrDivide(): Expression = {
     def isMulOrDiv(c: Char): Boolean = '*' == c || '/' == c
 
     ignoreWhiteSpace()
@@ -277,7 +271,7 @@ class Parser(line: String) {
 
   private def isPlusOrMinus(c: Char): Boolean = '+' == c || '-' == c
 
-  def expression(): Term = {
+  def expression(): Expression = {
     ignoreWhiteSpace()
 
     val left = multiplyOrDivide()
@@ -298,10 +292,10 @@ class Parser(line: String) {
     result
   }
 
-  def statement(): Term = {
+  def statement(): Expression = {
     ignoreWhiteSpace()
     if (matchChar(isLetter, (_ => true))) {
-      if (isVarDef())
+      if (isVarDef)
         varDef()
       else
         expression()
@@ -312,7 +306,7 @@ class Parser(line: String) {
   }
 
 
-  def process(): Term = {
+  def process(): Expression = {
     statement()
   }
 

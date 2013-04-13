@@ -1,10 +1,8 @@
 package step.adv.feature
 
 /**
- * Created by IntelliJ IDEA.
  * User: sun-april
  * Date: 10-12-20
- * To change this template use File | Settings | File Templates.
  */
 
 object Tree {

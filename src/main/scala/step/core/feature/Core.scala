@@ -4,7 +4,6 @@ import reflect.BeanProperty
 import annotation.target.beanGetter
 
 /**
- * Created by IntelliJ IDEA.
  * User: sun-april
  * Date: 10-12-20
  */

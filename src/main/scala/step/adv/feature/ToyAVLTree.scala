@@ -68,7 +68,7 @@ object AVLTree {
         if (right.isEmpty)
           return left
 
-        var (newSubTree, replacing) =
+        val (newSubTree, replacing) =
           adjustSubTree(left.asInstanceOf[Node[V]])
 
         Node(replacing.key, replacing.value, newSubTree, right)
@@ -146,7 +146,7 @@ object AVLTree {
       if (size == 0) Empty else t
 
     @throws(classOf[UnImplementedError])
-    def rotate() = throw new UnImplementedError
+    def rotate() { throw new UnImplementedError }
 
     def insert[B1 >: B](kv: (A, B1)): AVLTree[A, B1] = {
       val newsize =
@@ -169,11 +169,11 @@ object AVLTree {
       }
     }
 
-    override def toString(): String = tree.toString
+    override def toString : String = tree.toString
 
   } // end class AVLTree
 
-  def main(arr: Array[String]): Unit = {
+  def main(arr: Array[String]){
     case class Person(id: String, name: String)
     var tree = AVLTree.empty[Int, Person]
     tree = tree.insert(10, Person("10-1", "god"))

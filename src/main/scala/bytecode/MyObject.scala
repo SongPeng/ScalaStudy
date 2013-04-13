@@ -2,7 +2,7 @@ package bytecode
 
 object MyObject {
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]) {
     
     val c = new MyClazz("1")
     Console println c.name

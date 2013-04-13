@@ -13,5 +13,7 @@ resolvers ++= Seq(
     DefaultMavenRepository
 )
 
+scalacOptions ++= Seq("-feature", "-deprecation")
+
 libraryDependencies ++= Seq(
 )

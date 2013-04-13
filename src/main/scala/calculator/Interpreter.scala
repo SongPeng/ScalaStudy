@@ -42,16 +42,16 @@ import annotation.tailrec
  * lazyVarDefinition
  */
 
-object Interpretor {
+object Interpreter {
 
   val NON_EOF = '\\'
 
   val EOF: Char = '\u0003'
 
-  val stdinReader = Source.stdin.bufferedReader
+  val stdinReader = Source.stdin.bufferedReader()
 
-  def process(line: String): Term Either Exception = try {
-    Left(new Parser(line).process)
+  def process(line: String): Expression Either Exception = try {
+    Left(new Parser(line).process())
   } catch {
     case s: Exception => Right(s)
   }
@@ -59,7 +59,7 @@ object Interpretor {
   val prefix = "> "
 
   @tailrec
-  def interpreterLoop(): Unit = {
+  def interpreterLoop() {
     val buffer = new StringBuilder()
     var line = ""
     var scan = true
@@ -75,7 +75,7 @@ object Interpretor {
         }
       }
     }
-    process(buffer.toString) match {
+    process(buffer.toString()) match {
       case Left(t) => printf("get : %s \n= %s \n", t, evaluate(t))
       case Right(e: ExpressionError) =>
         val padding = for (i <- 2 to (prefix.length + e.position)) yield ' '
@@ -83,9 +83,13 @@ object Interpretor {
         println(line)
         print(padding.mkString)
         println('^')
+      case Right(other) =>
+        println("what happened ? got non expression exception  ")
+        other.printStackTrace()
+        println()
     }
     buffer.clear()
-    interpreterLoop();
+    interpreterLoop()
   }
 
 
